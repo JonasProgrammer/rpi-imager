@@ -60,6 +60,8 @@
 #include "embedded_config.h"
 #include "config.h"
 
+#define I_AM_NOT_STUPID_LET_ME_BE
+
 static QTextStream cerr(stderr);
 
 /* Newer Qt versions throw warnings if using ::endl instead of Qt::endl
@@ -248,7 +250,7 @@ int main(int argc, char *argv[])
 
     // Early check for elevated privileges on platforms that require them (Linux/Windows)
     bool hasPermissionIssue = false;
-#if defined(Q_OS_LINUX) || defined(Q_OS_WIN)
+#if (defined(Q_OS_LINUX) || defined(Q_OS_WIN)) && !defined(I_AM_NOT_STUPID_LET_ME_BE)
     if (!PlatformQuirks::hasElevatedPrivileges())
     {
         hasPermissionIssue = true;
