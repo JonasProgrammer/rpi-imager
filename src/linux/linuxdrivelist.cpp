@@ -55,7 +55,9 @@ namespace Drivelist
             "--paths",
             "--tree",
             "--output", "kname,type,subsystems,ro,rm,hotplug,size,phy-sec,log-sec,label,vendor,model,mountpoint",
+#if defined(RPI_IMAGER_NO_LOOP_DEVICES)
             "--exclude", "7"
+#endif
         };
         p.start("lsblk", args);
         p.waitForFinished(2000);

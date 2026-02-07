@@ -95,12 +95,14 @@ void DriveListModel::processDriveList(std::vector<Drivelist::DeviceDescriptor> l
         if (i.size == 0)
             continue;
 
+#if defined(RPI_IMAGER_NO_LOOP_DEVICES)
         // Allow read/write virtual devices (mounted disk images) but filter out:
         // - Read-only virtual devices
         // - System virtual devices (like APFS volumes on macOS)
         // - Virtual devices that are not removable/ejectable (likely system virtual devices)
         if (i.isVirtual && (i.isReadOnly || i.isSystem || !i.isRemovable))
             continue;
+#endif
 
         QString deviceNamePlusSize = QString::fromStdString(i.device)+":"+QString::number(i.size);
         if (i.isReadOnly)
