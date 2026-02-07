@@ -42,7 +42,7 @@ if(download_error)
     message(STATUS "Attempting to use fallback timezone list...")
     
     # Try to find a fallback timezone file
-    set(FALLBACK_FILE "${SOURCE_DIR}/timezones.txt.fallback")
+    set(FALLBACK_FILE "${SOURCE_DIR}/timezones.txt")
     if(EXISTS "${FALLBACK_FILE}")
         message(STATUS "Using fallback timezone file: ${FALLBACK_FILE}")
         file(READ "${FALLBACK_FILE}" fallback_content)
