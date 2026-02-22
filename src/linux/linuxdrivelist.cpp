@@ -11,6 +11,11 @@
 #include <QJsonObject>
 #include <QDebug>
 
+#if defined(RPI_IMAGER_DEVICES_ENV)
+#include <filesystem>
+#include <iostream>
+#endif
+
 /*
  * Our third-party drivelist module does not provide a C++ implementation
  * for listing drives on Linux (only Javascript)
@@ -19,6 +24,107 @@
 
 namespace Drivelist
 {
+
+#if defined(RPI_IMAGER_DEVICES_ENV)
+    namespace impl::devices_env_
+    {
+        enum class env_device_type
+        {
+            invalid = 0,
+            file,
+        };
+
+        static auto get_size(std::filesystem::path const& path) -> decltype(std::filesystem::file_size(path))
+        {
+            std::error_code ec{};
+            auto size = std::filesystem::file_size(path, ec);
+            if (ec)
+            {
+                std::cerr << "Failed to get size of " << path << ": " << ec.message() << std::endl;
+                size = 0;
+            }
+            return size;
+        }
+
+        [[nodiscard]] static bool extract_file_info(Drivelist::DeviceDescriptor& d, std::filesystem::path const& path)
+        {
+            std::error_code ec{};
+            auto const actual = std::filesystem::absolute(path, ec);
+            if (ec)
+            {
+                std::cerr << "Failed to get absolute path of " << path << ": " << ec.message() << std::endl;
+                return false;
+            }
+
+            d.busType = "env";
+            d.device = actual.string();
+            d.raw = true; // this is strange, but this is done below as well
+            d.isVirtual = true;
+            d.isReadOnly = false; // assume it is writable
+            d.isRemovable = false;
+            d.isCard = false;
+            d.isUSB = false;
+            d.isSCSI = false;
+            d.isSystem = false;
+            d.blockSize = 512;
+            d.logicalBlockSize = 512;
+            d.size = get_size(actual);
+            d.description = "Env-supplied " + path.string();
+
+            return true;
+        }
+
+        static void append_devices(std::vector<Drivelist::DeviceDescriptor>& deviceList, std::string_view env_drives)
+        {
+            env_device_type type = env_device_type::invalid;
+            bool is_type = true;
+
+            std::string_view::size_type pos = 0;
+            for (;;)
+            {
+                auto const split = env_drives.find(':', pos);
+                auto const n = split == std::string_view::npos ? split : split - pos;
+
+                auto const current_value = env_drives.substr(pos, n);
+
+                if (std::exchange(is_type, !is_type))
+                {
+                    if (current_value == "file")
+                        type = env_device_type::file;
+                    else
+                    {
+                        std::cerr << "Invalid device type: " << current_value << std::endl;
+                        type = env_device_type::invalid;
+                    }
+                }
+                else
+                {
+                    DeviceDescriptor d{};
+                    switch (type)
+                    {
+                        case env_device_type::file:
+                            if (!extract_file_info(d, current_value)) continue;
+                            break;
+                        default:
+                            std::cerr << "Invalid device type, ignoring " << current_value << std::endl;
+                            break;
+                    }
+
+                    deviceList.push_back(d);
+                }
+
+                if (split == std::string_view::npos) break;
+                pos = split + 1;
+            }
+
+            if (is_type)
+            {
+                std::cerr << "Pending last drive, should be even list";
+            }
+        }
+    }
+#endif
+
     static void _walkStorageChildren(Drivelist::DeviceDescriptor &d, QStringList &labels, QJsonArray &ca)
     {
         for (auto j : ca)
@@ -223,6 +329,13 @@ namespace Drivelist
 
             deviceList.push_back(d);
         }
+
+#if defined(RPI_IMAGER_DEVICES_ENV)
+        if (auto const env_drives = std::getenv("RPI_IMAGER_DEVICES"); env_drives)
+        {
+            impl::devices_env_::append_devices(deviceList, env_drives);
+        }
+#endif
 
         return deviceList;
     }

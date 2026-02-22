@@ -8,6 +8,7 @@ OPTION (ENABLE_CHECK_VERSION "Check for version updates" ON)
 OPTION (ENABLE_TELEMETRY "Enable sending telemetry" ON)
 OPTION (BUILD_EMBEDDED "Build for Embedded Imager" OFF)
 OPTION (BUILD_CLI_ONLY "Build CLI-only version without GUI components" OFF)
+OPTION (ENABLE_ENV_DEVICES "Enable devices from RPI_IMAGER_DEVICES" OFF)
 
 # We use FetchContent_Populate() instead of FetchContent_MakeAvailable() to allow EXCLUDE_FROM_ALL
 # This prevents the dependencies from being built by default, which is our desired behavior
@@ -434,6 +435,10 @@ endif()
 
 if(BUILD_CLI_ONLY)
     add_definitions(-DCLI_ONLY_BUILD)
+endif()
+
+if(ENABLE_ENV_DEVICES)
+    add_definitions(-DRPI_IMAGER_DEVICES_ENV)
 endif()
 
 # Qt policies only needed for GUI builds
